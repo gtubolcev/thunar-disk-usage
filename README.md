@@ -18,7 +18,7 @@ shortcut, quit Thunar (`thunar -q`) and add a line to
 (gtk_accel_path "<Actions>/ThunarActions/uca-action-tdu-show-disk-usage" "<Primary><Shift>d")
 ```
 
-![Disk Usage tab](../docs/thunar-disk-usage.png)
+![Disk Usage tab](docs/thunar-disk-usage.png)
 
 Each ring is one level of sub folders, up to five levels deep. The chart grows
 while the folder is scanned. Pointing at a segment shows the folder's name and
@@ -37,7 +37,10 @@ Translated into German and Russian.
 ## Install
 
 Download the package for your system from
-[Releases](https://github.com/gtubolcev/xfce-patches/releases/latest):
+[Releases](https://github.com/gtubolcev/thunar-disk-usage/releases/latest)
+(until the first release there: the releases of
+[xfce-patches](https://github.com/gtubolcev/xfce-patches/releases/latest), where
+the plugin lived before):
 
 | System | File |
 |---|---|
@@ -72,6 +75,11 @@ thunar -q
 `-Dtests=true` also builds `tests/du-scan-test PATH` (prints the scan, to
 compare with `du -sB1 -x PATH`) and `tests/du-view-test PATH` (the view in a
 window, without Thunar).
+
+Packages: `scripts/build-deb.sh` (Ubuntu, Debian), `scripts/build-arch.sh`
+(Arch, from `arch/PKGBUILD`), `scripts/upload-ppa.sh` (the PPA). CI builds all of
+them on every push; a tag `vX.Y.Z` equal to the version in `debian/changelog`
+makes a release and uploads to the PPA.
 
 ## Credits
 

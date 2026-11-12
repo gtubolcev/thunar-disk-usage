@@ -1,0 +1,140 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    name: build (${{ matrix.dist }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { dist: resolute, image: 'ubuntu:26.04' }
+          - { dist: noble, image: 'ubuntu:24.04' }
+          - { dist: trixie, image: 'debian:trixie' }
+          - { dist: arch, image: 'archlinux:latest' }
+    steps:
+      - name: Prepare container
+        if: matrix.dist != 'arch'
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git build-essential devscripts equivs fakeroot dpkg-dev
+      - uses: actions/checkout@v5
+      - name: Build the .deb
+        if: matrix.dist != 'arch'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          DEBFULLNAME: ${{ github.actor }}
+          DEBEMAIL: ${{ github.actor }}@users.noreply.github.com
+        run: scripts/build-deb.sh out
+      - name: Build the Arch package
+        if: matrix.dist == 'arch'
+        run: scripts/build-arch.sh out
+      - uses: actions/upload-artifact@v5
+        with:
+          name: pkgs-${{ matrix.dist }}
+          path: out/*
+
+  # the README screenshot, taken from the package just built; committed only
+  # when the picture changed (the clock and the settings are fixed). Pushes
+  # with GITHUB_TOKEN do not start another workflow run.
+  screenshot:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    permissions:
+      contents: write
+    steps:
+      - run: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: pkgs-resolute
+          path: debs
+      - run: scripts/screenshot.sh debs docs/thunar-disk-usage.png
+      - name: Commit the screenshot if it changed
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          shot=docs/thunar-disk-usage.png
+          if git diff --quiet -- $shot; then
+            echo "screenshot unchanged"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: Update the screenshot" -- $shot
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
+
+  # each release also goes to the PPA, signed with a key of its own that is
+  # registered in Launchpad (secret PPA_GPG_KEY, armored private key)
+  ppa:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    name: ppa (${{ matrix.dist }})
+    strategy:
+      fail-fast: false
+      matrix:
+        dist: [resolute, noble]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends devscripts dput dpkg-dev
+      - name: Import the signing key
+        env:
+          PPA_GPG_KEY: ${{ secrets.PPA_GPG_KEY }}
+        run: |
+          [ -n "$PPA_GPG_KEY" ] || { echo "::error::secret PPA_GPG_KEY is not set"; exit 1; }
+          echo "$PPA_GPG_KEY" | gpg --batch --import
+          echo "SIGN_KEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ { print $10; exit }')" >> "$GITHUB_ENV"
+      - name: Upload for ${{ matrix.dist }}
+        env:
+          RELEASE: ${{ github.ref_name }}
+        run: scripts/upload-ppa.sh "${{ matrix.dist }}"
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: out
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # what's new: the message of the annotated tag
+          REF=$(gh api "repos/${{ github.repository }}/git/ref/tags/${{ github.ref_name }}" -q '.object.type + " " + .object.sha')
+          if [ "${REF% *}" = tag ]; then
+            { echo "## What's new"; echo; gh api "repos/${{ github.repository }}/git/tags/${REF#* }" -q .message; echo; } > notes.md
+          fi
+          cat >> notes.md <<'NOTES'
+          Packages for amd64; they work with the stock Thunar (4.18 and later):
+
+          | Distribution | File |
+          |---|---|
+          | Xubuntu 26.04 (resolute) | `thunar-disk-usage-plugin_*~resolute_amd64.deb` |
+          | Xubuntu 24.04 (noble), Linux Mint 22 | `thunar-disk-usage-plugin_*~noble_amd64.deb` |
+          | Debian 13 (trixie), MX Linux 25 | `thunar-disk-usage-plugin_*~trixie_amd64.deb` |
+          | Arch Linux, Manjaro, EndeavourOS | `thunar-disk-usage-plugin-*.pkg.tar.zst` |
+
+          Install with `sudo apt install ./thunar-disk-usage-plugin_*.deb` (or `sudo pacman -U ./thunar-disk-usage-plugin-*.pkg.tar.zst`) and run `thunar -q`. On Ubuntu the [PPA](https://launchpad.net/~gtubolcev/+archive/ubuntu/xfce-patches) also brings updates.
+          NOTES
+          gh release create "${{ github.ref_name }}" out/* --repo "${{ github.repository }}" --notes-file notes.md --generate-notes

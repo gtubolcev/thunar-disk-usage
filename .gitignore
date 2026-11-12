@@ -1,1 +1,5 @@
 po/*.pot
+_build/
+out/
+_tmp/
+*.deb
