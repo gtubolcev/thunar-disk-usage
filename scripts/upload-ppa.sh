@@ -6,8 +6,8 @@
 #
 # codename defaults to the running release. The version is that of
 # debian/changelog plus the codename and an upload number
-# (0.1.0~resolute~ppa1). RELEASE=v0.1.0 (the tag) must match
-# debian/changelog. PPA=... overrides the target (ppa:gtubolcev/xfce-patches,
+# (0.1.0~resolute~ppa1). RELEASE (the tag: v0.1.0 or
+# thunar-disk-usage-plugin-0.1.0) must match debian/changelog. PPA=... overrides the target (ppa:gtubolcev/xfce-patches,
 # where the plugin was published before it got a repository of its own).
 #
 # Needs a GPG key known to Launchpad; SIGN_KEY=... picks the key (else the
@@ -40,7 +40,9 @@ rm -rf "$WORK"
 cd "$WORK/src"
 SOURCE=$(dpkg-parsechangelog -S Source)
 UPSTREAM=$(dpkg-parsechangelog -S Version)
-if [ -n "${RELEASE:-}" ] && [ "$RELEASE" != "v$UPSTREAM" ]; then
+TAGVER=${RELEASE#v}
+TAGVER=${TAGVER#thunar-disk-usage-plugin-}
+if [ -n "${RELEASE:-}" ] && [ "$TAGVER" != "$UPSTREAM" ]; then
   echo "error: tag $RELEASE, but debian/changelog has $UPSTREAM" >&2
   exit 1
 fi

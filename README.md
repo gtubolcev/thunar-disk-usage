@@ -78,8 +78,9 @@ window, without Thunar).
 
 Packages: `scripts/build-deb.sh` (Ubuntu, Debian), `scripts/build-arch.sh`
 (Arch, from `arch/PKGBUILD`), `scripts/upload-ppa.sh` (the PPA). CI builds all of
-them on every push; a tag `vX.Y.Z` equal to the version in `debian/changelog`
-makes a release and uploads to the PPA.
+them on every push; a tag `vX.Y.Z` or `thunar-disk-usage-plugin-X.Y.Z` (as
+`xfce-do-release` names it) equal to the version in `debian/changelog` makes a
+release and uploads to the PPA.
 
 ## Credits
 

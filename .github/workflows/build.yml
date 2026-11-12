@@ -3,7 +3,8 @@ name: build
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    # vX.Y.Z or, as xfce-do-release names them, thunar-disk-usage-plugin-X.Y.Z
+    tags: ['v*', 'thunar-disk-usage-plugin-*']
   pull_request:
   workflow_dispatch:
 
@@ -81,7 +82,7 @@ jobs:
   # registered in Launchpad (secret PPA_GPG_KEY, armored private key)
   ppa:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     name: ppa (${{ matrix.dist }})
     strategy:
@@ -108,7 +109,7 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
