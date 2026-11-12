@@ -39,7 +39,7 @@ Translated into German and Russian.
 Download the package for your system from
 [Releases](https://github.com/gtubolcev/thunar-disk-usage/releases/latest)
 (until the first release there: the releases of
-[xfce-patches](https://github.com/gtubolcev/xfce-patches/releases/latest), where
+[xfce4-settings-theme-schedule](https://github.com/gtubolcev/xfce4-settings-theme-schedule/releases/latest), where
 the plugin lived before):
 
 | System | File |

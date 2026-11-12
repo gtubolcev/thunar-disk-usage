@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: thunar-disk-usage-plugin
-Source: https://github.com/gtubolcev/xfce-patches
+Source: https://github.com/gtubolcev/thunar-disk-usage
 
 Files: *
 Copyright: 2026 Grigory Tuboltsev
